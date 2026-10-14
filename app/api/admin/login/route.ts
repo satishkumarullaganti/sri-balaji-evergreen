@@ -1,8 +1,14 @@
 import { SignJWT } from "jose";
 
-const secret = new TextEncoder().encode(
-  process.env.ADMIN_SESSION_SECRET || "temporary-secret"
-);
+
+const secretValue = process.env.ADMIN_SESSION_SECRET;
+
+if (!secretValue) {
+  throw new Error("ADMIN_SESSION_SECRET is not configured.");
+}
+
+const secret = new TextEncoder().encode(secretValue);
+
 
 export async function POST(request: Request) {
   try {

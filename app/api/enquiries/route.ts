@@ -1,5 +1,7 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { isAdminAuthenticated } from "../admin/auth";
+
 
 
 const adapter = new PrismaPg({
@@ -48,8 +50,18 @@ export async function POST(request: Request) {
     );
   }
 }
+  
 export async function GET() {
   try {
+    // Step 1: Check admin login
+    if (!(await isAdminAuthenticated())) {
+      return Response.json(
+        { error: "Unauthorized." },
+        { status: 401 }
+      );
+    }
+
+    // Step 2: Fetch enquiries only if admin is authenticated
     const enquiries = await prisma.enquiry.findMany({
       orderBy: {
         createdAt: "desc",
@@ -66,3 +78,58 @@ export async function GET() {
     );
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+     if (!(await isAdminAuthenticated())) {
+      return Response.json(
+        { error: "Unauthorized." },
+        { status: 401 }
+      );
+    }
+    const body = await request.json();
+
+    const {
+      id,
+      status,
+      notes,
+      followUpDate,
+    } = body;
+
+    if (!id) {
+      return Response.json(
+        { error: "Enquiry ID is required." },
+        { status: 400 }
+      );
+    }
+
+    const enquiry = await prisma.enquiry.update({
+      where: {
+        id: Number(id),
+      },
+      data: {
+        ...(status !== undefined && {
+          status,
+        }),
+        ...(notes !== undefined && {
+          notes: notes || null,
+        }),
+        ...(followUpDate !== undefined && {
+          followUpDate: followUpDate
+            ? new Date(followUpDate)
+            : null,
+        }),
+      },
+    });
+
+    return Response.json(enquiry);
+  } catch (error) {
+    console.error("Enquiry PATCH error:", error);
+
+    return Response.json(
+      { error: "Unable to update enquiry." },
+      { status: 500 }
+    );
+  }
+}
+
