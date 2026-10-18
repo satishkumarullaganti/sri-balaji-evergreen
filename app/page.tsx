@@ -255,7 +255,7 @@ export default function Home() {
           {/* 3 BHK */}
           <div className="mt-10 overflow-hidden rounded-2xl bg-white shadow-sm">
 
-            <div className="grid lg:grid-cols-[1fr_340px]">
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
 
               <div className="bg-white p-4 sm:p-6">
                 <img
@@ -318,39 +318,51 @@ export default function Home() {
 
 
           {/* 2 BHK */}
-          <div className="mt-6 rounded-2xl border border-[#ddd7ca] bg-white p-7 sm:p-9">
+          
 
-            <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
+<div className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm">
+  <div className="grid lg:grid-cols-[1fr_340px]">
+    <div className="bg-white p-4 sm:p-6">
+      <img
+        src="/evergreen-2bhk-floor-plan.png"
+        alt="Sri Balaji Evergreen Homes 2 BHK floor plan"
+        className="mx-auto h-auto w-full rounded-lg object-contain"
+      />
+    </div>
 
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#b48728]">
-                  Floor Plan
-                </p>
+    <div className="flex flex-col justify-center bg-[#123f32] p-7 text-white sm:p-9">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#f2cf78]">
+        Floor Plan
+      </p>
 
-                <h3 className="mt-2 text-[26px] font-bold">
-                  2 BHK
-                </h3>
+      <h3 className="mt-3 text-[27px] font-bold">
+        2 BHK
+      </h3>
 
-                <p className="mt-2 max-w-[650px] text-[14px] leading-6 text-[#61756f]">
-                  Detailed 2 BHK floor-plan information will be published
-                  once the final plan is available.
-                </p>
-              </div>
+      <p className="mt-3 text-[14px] leading-6 text-[#d6e1dc]">
+        Explore a thoughtfully planned two-bedroom home with
+        a comfortable living area, kitchen and balconies.
+      </p>
 
-              <span className="rounded-full bg-[#f4e8c4] px-5 py-2 text-[12px] font-semibold uppercase tracking-wider text-[#8c661b]">
-                Coming Soon
-              </span>
-
-            </div>
-
+      <div className="mt-6 rounded-lg border border-white/15 bg-white/5 p-4">
+        <p className="text-[11px] uppercase tracking-wider text-[#f2cf78]">
+          Reference Plan
+        </p>
+        <p className="mt-1 text-[18px] font-semibold">
+          2 Bedrooms · 2 Toilets
+        </p>
+        <p className="mt-2 text-[12px] leading-5 text-[#d6e1dc]">
+          Layout shown for reference. Final project specifications
+          are subject to confirmation.
+        </p>
+      </div>
+    </div>
+  </div>
           </div>
-
         </div>
       </section>
 
-
-{/* ================= PREVIOUS PROJECTS ================= */}
-{/* ================= PREVIOUS PROJECTS ================= */}
+      {/* ================= PREVIOUS PROJECTS ================= */}
 <section
   id="previous-projects"
   className="scroll-mt-24 border-t border-slate-200 bg-white py-14 sm:py-16"
