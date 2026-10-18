@@ -175,45 +175,120 @@ export async function GET() {
   }
 }
 
+
 export async function PATCH(request: Request) {
   try {
-     if (!(await isAdminAuthenticated())) {
+    if (!(await isAdminAuthenticated())) {
       return Response.json(
         { error: "Unauthorized." },
         { status: 401 }
       );
     }
+
     const body = await request.json();
 
-    const {
-      id,
-      status,
-      notes,
-      followUpDate,
-    } = body;
-
-    if (!id) {
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
       return Response.json(
-        { error: "Enquiry ID is required." },
+        { error: "Invalid request." },
+        { status: 400 }
+      );
+    }
+
+    const { id, status, notes, followUpDate } = body;
+
+    if (
+      typeof id !== "number" ||
+      !Number.isInteger(id) ||
+      id <= 0
+    ) {
+      return Response.json(
+        { error: "A valid enquiry ID is required." },
+        { status: 400 }
+      );
+    }
+
+    const allowedStatuses = [
+      "NEW",
+      "CONTACTED",
+      "INTERESTED",
+      "SITE VISIT",
+      "CLOSED",
+      "NOT INTERESTED",
+    ];
+
+    if (
+      status !== undefined &&
+      (typeof status !== "string" ||
+        !allowedStatuses.includes(status))
+    ) {
+      return Response.json(
+        { error: "Invalid enquiry status." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      notes !== undefined &&
+      (typeof notes !== "string" || notes.length > 5000)
+    ) {
+      return Response.json(
+        { error: "Notes must be text and no longer than 5000 characters." },
+        { status: 400 }
+      );
+    }
+
+    let parsedFollowUpDate: Date | null | undefined;
+
+    if (followUpDate !== undefined) {
+      if (followUpDate === "") {
+        parsedFollowUpDate = null;
+      } else if (
+        typeof followUpDate === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(followUpDate)
+      ) {
+        const parsedDate = new Date(
+          `${followUpDate}T00:00:00.000Z`
+        );
+
+        if (
+          Number.isNaN(parsedDate.getTime()) ||
+          parsedDate.toISOString().slice(0, 10) !== followUpDate
+        ) {
+          return Response.json(
+            { error: "Invalid follow-up date." },
+            { status: 400 }
+          );
+        }
+
+        parsedFollowUpDate = parsedDate;
+      } else {
+        return Response.json(
+          { error: "Follow-up date must use YYYY-MM-DD format." },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (
+      status === undefined &&
+      notes === undefined &&
+      followUpDate === undefined
+    ) {
+      return Response.json(
+        { error: "No valid fields provided to update." },
         { status: 400 }
       );
     }
 
     const enquiry = await prisma.enquiry.update({
-      where: {
-        id: Number(id),
-      },
+      where: { id },
       data: {
-        ...(status !== undefined && {
-          status,
-        }),
+        ...(status !== undefined && { status }),
         ...(notes !== undefined && {
-          notes: notes || null,
+          notes: notes.trim() || null,
         }),
-        ...(followUpDate !== undefined && {
-          followUpDate: followUpDate
-            ? new Date(followUpDate)
-            : null,
+        ...(parsedFollowUpDate !== undefined && {
+          followUpDate: parsedFollowUpDate,
         }),
       },
     });
@@ -228,4 +303,3 @@ export async function PATCH(request: Request) {
     );
   }
 }
-
