@@ -34,6 +34,10 @@ export default function ChatWidget() {
   const [interestedIn, setInterestedIn] = useState("2 BHK");
   const [consent, setConsent] = useState(false);
   const [leadCollectionStarted, setLeadCollectionStarted] = useState(false);
+  const [leadStage, setLeadStage] = useState<
+    "name" | "phone" | "email" | "interest" | "consent" | "complete"
+  >("name");
+  const [leadInterestKnown, setLeadInterestKnown] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +55,102 @@ export default function ChatWidget() {
     const message = input.trim();
 
     if (!message || isLoading) return;
+
+    // Handle answers while collecting enquiry details.
+    if (leadCollectionStarted) {
+      setInput("");
+      setError("");
+      setMessages((previous) => [...previous, { role: "user", content: message }]);
+
+      const reply = (content: string) => {
+        setMessages((previous) => [...previous, { role: "assistant", content }]);
+      };
+
+      if (leadStage === "name") {
+        const value = message.trim();
+        if (value.length < 2 || value.length > 100) {
+          reply("Please enter your name (2 to 100 characters). ");
+          return;
+        }
+        setName(value);
+        setLeadStage("phone");
+        reply("Thank you! What is your phone number?");
+        return;
+      }
+
+      if (leadStage === "phone") {
+        const digits = message.replace(/\D/g, "");
+        if (digits.length < 8 || digits.length > 15) {
+          reply("Please enter a valid phone number with 8 to 15 digits.");
+          return;
+        }
+        setPhone(message.trim());
+        setLeadStage("email");
+        reply("What is your email address? You can type 'skip' if you prefer not to share it.");
+        return;
+      }
+
+      if (leadStage === "email") {
+        const emailValue = message.trim();
+        if (emailValue.toLowerCase() === "skip") {
+          setEmail("");
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+          reply("That email doesn't look valid. Please try again, or type 'skip'.");
+          return;
+        } else {
+          setEmail(emailValue);
+        }
+
+        if (leadInterestKnown) {
+          setLeadStage("consent");
+          reply(`You are interested in ${interestedIn}. May our sales team contact you about this enquiry? Please type YES to agree or NO to cancel.`);
+        } else {
+          setLeadStage("interest");
+          reply("Which apartment are you interested in: 2 BHK or 3 BHK?");
+        }
+        return;
+      }
+
+      if (leadStage === "interest") {
+        const lower = message.toLowerCase();
+        if (/\b3\s*bhk\b/.test(lower)) {
+          setInterestedIn("3 BHK");
+        } else if (/\b2\s*bhk\b/.test(lower)) {
+          setInterestedIn("2 BHK");
+        } else {
+          reply("Please specify 2 BHK or 3 BHK.");
+          return;
+        }
+        setLeadInterestKnown(true);
+        setLeadStage("consent");
+        reply(`May our sales team contact you about this ${/\b3\s*bhk\b/.test(lower) ? "3 BHK" : "2 BHK"} enquiry? Please type YES to agree or NO to cancel.`);
+        return;
+      }
+
+      if (leadStage === "consent") {
+        const answer = message.trim().toLowerCase();
+        if (answer === "no") {
+          setLeadCollectionStarted(false);
+          setLeadStage("name");
+          setLeadInterestKnown(false);
+          setConsent(false);
+          reply("No problem. I won't open the enquiry form. You can still ask me questions about the apartments.");
+          return;
+        }
+        if (answer !== "yes") {
+          reply("Please type YES to agree to be contacted, or NO to cancel.");
+          return;
+        }
+
+        setConsent(true);
+        setLeadCollectionStarted(false);
+        setLeadStage("complete");
+        setShowEnquiryForm(true);
+        setEnquiryError("");
+        reply("Thank you. Please review your details and confirm submission using the form.");
+        return;
+      }
+    }
 
     const updatedMessages: Message[] = [
       ...messages,
@@ -82,28 +182,45 @@ export default function ChatWidget() {
         );
       }
 
-      setMessages((previous) => [
-  ...previous,
-  {
-    role: "assistant",
-    content: data.reply,
-  },
-]);
+      const lowerMessage = message.toLowerCase();
+      const isEnquiryIntent =
+        data.intent === "SUBMIT_ENQUIRY" ||
+        data.intent === "APARTMENT_INTEREST";
 
-if (
-  data.intent === "SUBMIT_ENQUIRY" ||
-  data.intent === "APARTMENT_INTEREST"
-) {
-  const lowerMessage = message.toLowerCase();
+      if (isEnquiryIntent) {
+        const has3BHK = /\b3\s*bhk\b/.test(lowerMessage);
+        const has2BHK = /\b2\s*bhk\b/.test(lowerMessage);
 
-  if (/\b3\s*bhk\b/.test(lowerMessage)) {
-    setInterestedIn("3 BHK");
-  } else if (/\b2\s*bhk\b/.test(lowerMessage)) {
-    setInterestedIn("2 BHK");
-  }
+        if (has3BHK) {
+          setInterestedIn("3 BHK");
+          setLeadInterestKnown(true);
+        } else if (has2BHK) {
+          setInterestedIn("2 BHK");
+          setLeadInterestKnown(true);
+        } else {
+          setLeadInterestKnown(false);
+        }
 
-  setShowEnquiryForm(true);
-}
+        setLeadCollectionStarted(true);
+        setLeadStage("name");
+        setShowEnquiryForm(false);
+        setEnquiryError("");
+
+        setMessages((previous) => [
+          ...previous,
+          {
+            role: "assistant",
+            content: has3BHK || has2BHK
+              ? `I'd be happy to help with your ${has3BHK ? "3 BHK" : "2 BHK"} enquiry! May I have your name?`
+              : "I'd be happy to help with your enquiry! May I have your name?",
+          },
+        ]);
+      } else {
+        setMessages((previous) => [
+          ...previous,
+          { role: "assistant", content: data.reply },
+        ]);
+      }
     } catch {
       setError(
         "Sorry, I couldn't reach the AI assistant. Please try again."
@@ -171,6 +288,9 @@ if (
       setEmail("");
       setInterestedIn("2 BHK");
       setConsent(false);
+      setLeadCollectionStarted(false);
+      setLeadStage("name");
+      setLeadInterestKnown(false);
     } catch (err) {
       setEnquiryError(
         err instanceof Error
@@ -190,6 +310,9 @@ if (
     setEmail("");
     setInterestedIn("2 BHK");
     setConsent(false);
+    setLeadCollectionStarted(false);
+    setLeadStage("name");
+    setLeadInterestKnown(false);
   }
 
   return (
